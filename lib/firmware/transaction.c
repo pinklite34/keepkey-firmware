@@ -147,7 +147,7 @@ bool compute_address(const CoinType *coin,
 			prelen = address_prefix_bytes_len(coin->address_type_p2sh);
 			address_write_prefix_bytes(coin->address_type_p2sh, raw);
 			memcpy(raw + prelen, digest, 32);
-			if (!base58_encode_check(raw, prelen + 20, curve->hasher_base58, address, MAX_ADDR_SIZE)) {
+			if (!base58_encode_check(raw, prelen + 20, curve->hasher_base58, address, MAX_ADDR_SIZE, NULL)) {
 				return 0;
 			}
 		} else if (coin->has_cashaddr_prefix) {
@@ -161,7 +161,7 @@ bool compute_address(const CoinType *coin,
 			prelen = address_prefix_bytes_len(coin->address_type_p2sh);
 			address_write_prefix_bytes(coin->address_type_p2sh, raw);
 			ripemd160(digest, 32, raw + prelen);
-			if (!base58_encode_check(raw, prelen + 20, curve->hasher_base58, address, MAX_ADDR_SIZE)) {
+			if (!base58_encode_check(raw, prelen + 20, curve->hasher_base58, address, MAX_ADDR_SIZE, NULL)) {
 				return 0;
 			}
 		}
@@ -263,7 +263,7 @@ int compile_output(const CoinType *coin, const HDNode *root, TxOutputType *in, T
 	const curve_info *curve = get_curve_by_name(coin->curve_name);
 	if (!curve) return 0;
 
-	addr_raw_len = base58_decode_check(in->address, curve->hasher_base58, addr_raw, MAX_ADDR_RAW_SIZE);
+	addr_raw_len = base58_decode_check(in->address, curve->hasher_base58, addr_raw, MAX_ADDR_RAW_SIZE, NULL);
 	size_t prefix_len;
 	if (coin->has_address_type                                  // p2pkh
 		&& addr_raw_len == 20 + (prefix_len = address_prefix_bytes_len(coin->address_type))
@@ -912,7 +912,7 @@ uint32_t tx_output_weight(const CoinType *coin, const curve_info *curve, const T
 			&& segwit_addr_decode(&witver, addr_raw, &addr_raw_len, coin->bech32_prefix, txoutput->address)) {
 			output_script_size = 2 + addr_raw_len;
 		} else {
-			addr_raw_len = base58_decode_check(txoutput->address, curve->hasher_base58, addr_raw, MAX_ADDR_RAW_SIZE);
+			addr_raw_len = base58_decode_check(txoutput->address, curve->hasher_base58, addr_raw, MAX_ADDR_RAW_SIZE, NULL);
 			if (coin->has_address_type
 				&& address_check_prefix(addr_raw, coin->address_type)) {
 				output_script_size = TXSIZE_P2PKHASH;

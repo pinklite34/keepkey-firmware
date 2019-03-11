@@ -1,7 +1,7 @@
 /*
  * This file is part of the KeepKey project.
  *
- * Copyright (C) 2015 KeepKey LLC
+ * Copyright (C) 2019 ShapeShift
  *
  * This library is free software: you can redistribute it and/or modify
  * it under the terms of the GNU Lesser General Public License as published by
@@ -17,26 +17,13 @@
  * along with this library.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#ifndef INTERFACE_H
-#define INTERFACE_H
+#ifndef KEEPKEY_FIRMWARE_RIPPLE_H
+#define KEEPKEY_FIRMWARE_RIPPLE_H
 
-// Allow this file to be used from C++ by renaming an unfortunately named field:
-#define delete del
-#include "messages.pb.h"
-#include "messages-nano.pb.h"
-#undef delete
+#include "trezor/crypto/bip32.h"
 
-#include "messages-eos.pb.h"
 #include "messages-ripple.pb.h"
 
-#include "types.pb.h"
-#include "trezor_transport.h"
-
-#ifndef EMULATOR
-/* The max size of a decoded protobuf */
-#  define MAX_DECODE_SIZE (13 * 1024)
-#else
-#  define MAX_DECODE_SIZE (26 * 1024)
-#endif
+bool ripple_getAddress(const HDNode *node, char address[MAX_ADDR_SIZE]);
 
 #endif

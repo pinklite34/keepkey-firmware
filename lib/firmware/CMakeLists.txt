@@ -20,6 +20,7 @@ set(sources
     recovery.c
     recovery_cipher.c
     reset.c
+    ripple.c
     signing.c
     storage.c
     transaction.c

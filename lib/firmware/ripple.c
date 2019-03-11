@@ -1,7 +1,7 @@
 /*
  * This file is part of the KeepKey project.
  *
- * Copyright (C) 2015 KeepKey LLC
+ * Copyright (C) 2019 ShapeShift
  *
  * This library is free software: you can redistribute it and/or modify
  * it under the terms of the GNU Lesser General Public License as published by
@@ -17,26 +17,26 @@
  * along with this library.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#ifndef INTERFACE_H
-#define INTERFACE_H
+#include "keepkey/firmware/ripple.h"
 
-// Allow this file to be used from C++ by renaming an unfortunately named field:
-#define delete del
-#include "messages.pb.h"
-#include "messages-nano.pb.h"
-#undef delete
+#include "trezor/crypto/base58.h"
 
-#include "messages-eos.pb.h"
-#include "messages-ripple.pb.h"
+// https://developers.ripple.com/base58-encodings.html
+static const char *ripple_b58digits = "rpshnaf39wBUDNEGHJKLM4PQRST7VWXYZ2bcdeCg65jkm8oFqi1tuvAxyz";
 
-#include "types.pb.h"
-#include "trezor_transport.h"
+bool ripple_getAddress(const HDNode *node, char address[MAX_ADDR_SIZE])
+{
+    uint8_t buff[64];
+    memset(buff, 0, sizeof(buff));
 
-#ifndef EMULATOR
-/* The max size of a decoded protobuf */
-#  define MAX_DECODE_SIZE (13 * 1024)
-#else
-#  define MAX_DECODE_SIZE (26 * 1024)
-#endif
+    Hasher hasher;
+    hasher_Init(&hasher, HASHER_SHA2_RIPEMD);
+    hasher_Update(&hasher, node->public_key, 33);
+    hasher_Final(&hasher, buff + 1);
 
-#endif
+    if (!base58_encode_check(buff, 21, HASHER_SHA2D,
+                             address, MAX_ADDR_SIZE, ripple_b58digits))
+        return false;
+
+    return true;
+}

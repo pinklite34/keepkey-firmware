@@ -176,7 +176,7 @@ bool eos_publicKeyToWif(const uint8_t *public_key, EosPublicKeyKind kind, char *
 
     if (!base58_encode_check(public_key, 33, HASHER_RIPEMD,
                              pubkey + prefix_len,
-                             len - prefix_len)) {
+                             len - prefix_len, NULL)) {
         return false;
     }
 

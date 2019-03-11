@@ -209,7 +209,7 @@ int cryptoMessageVerify(const CoinType *coin, const uint8_t *message, size_t mes
 				return 2;
 			}
 		} else {
-			len = base58_decode_check(address, curve->hasher_base58, addr_raw, MAX_ADDR_RAW_SIZE);
+			len = base58_decode_check(address, curve->hasher_base58, addr_raw, MAX_ADDR_RAW_SIZE, NULL);
 		}
 		ecdsa_get_address_raw(pubkey, coin->address_type, curve->hasher_pubkey, recovered_raw);
 		if (memcmp(recovered_raw, addr_raw, len) != 0
@@ -219,7 +219,7 @@ int cryptoMessageVerify(const CoinType *coin, const uint8_t *message, size_t mes
 	} else
 	// segwit-in-p2sh
 	if (signature[0] >= 35 && signature[0] <= 38) {
-		size_t len = base58_decode_check(address, curve->hasher_base58, addr_raw, MAX_ADDR_RAW_SIZE);
+		size_t len = base58_decode_check(address, curve->hasher_base58, addr_raw, MAX_ADDR_RAW_SIZE, NULL);
 		ecdsa_get_address_segwit_p2sh_raw(pubkey, coin->address_type_p2sh, curve->hasher_pubkey, recovered_raw);
 		if (memcmp(recovered_raw, addr_raw, len) != 0
 			|| len != address_prefix_bytes_len(coin->address_type_p2sh) + 20) {

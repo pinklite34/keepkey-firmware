@@ -88,6 +88,9 @@ void fsm_msgApplyPolicies(ApplyPolicies *msg);
 void fsm_msgNanoGetAddress(NanoGetAddress *msg);
 void fsm_msgNanoSignTx(NanoSignTx *msg);
 
+void fsm_msgRippleGetAddress(const RippleGetAddress *msg);
+void fsm_msgRippleSignTx(const RippleSignTx *msg);
+
 void fsm_msgEosGetPublicKey(const EosGetPublicKey *msg);
 void fsm_msgEosSignTx(const EosSignTx *msg);
 void fsm_msgEosTxActionAck(const EosTxActionAck *msg);

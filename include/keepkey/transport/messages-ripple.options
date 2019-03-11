@@ -1,0 +1,11 @@
+RippleGetAddress.address_n max_count:8
+
+RippleAddress.address max_size:36
+
+RippleSignTx.address_n max_count:8
+
+RipplePayment.destination max_size:36
+
+# FIXME: what's the max size here?
+RippleSignedTx.signature max_size:256
+RippleSignedTx.serialized_tx max_size:1024
