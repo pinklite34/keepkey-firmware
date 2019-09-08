@@ -40,3 +40,17 @@ bool ripple_getAddress(const HDNode *node, char address[MAX_ADDR_SIZE])
 
     return true;
 }
+
+void ripple_formatAmount(char *buf, size_t len, uint64_t amount)
+{
+    bignum256 val;
+    bn_read_uint64(amount, &val);
+    bn_format(&val, NULL, " XRP", RIPPLE_DECIMALS, 0, false, buf, len);
+}
+
+void ripple_signTx(const HDNode *node, const RippleSignTx *tx,
+                   RippleSignedTx *resp) {
+    (void)node;
+    (void)tx;
+    (void)resp;
+}

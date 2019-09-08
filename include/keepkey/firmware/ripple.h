@@ -24,6 +24,16 @@
 
 #include "messages-ripple.pb.h"
 
+#define RIPPLE_MIN_FEE    10
+#define RIPPLE_MAX_FEE 10000
+
+#define RIPPLE_DECIMALS 6
+
 bool ripple_getAddress(const HDNode *node, char address[MAX_ADDR_SIZE]);
+
+void ripple_formatAmount(char *buf, size_t len, uint64_t amount);
+
+void ripple_signTx(const HDNode *node, const RippleSignTx *tx,
+                   RippleSignedTx *resp);
 
 #endif
