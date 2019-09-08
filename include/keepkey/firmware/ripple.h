@@ -29,11 +29,13 @@
 
 #define RIPPLE_DECIMALS 6
 
+#define RIPPLE_FLAG_FULLY_CANONICAL 0x80000000
+
 bool ripple_getAddress(const HDNode *node, char address[MAX_ADDR_SIZE]);
 
 void ripple_formatAmount(char *buf, size_t len, uint64_t amount);
 
-void ripple_signTx(const HDNode *node, const RippleSignTx *tx,
+void ripple_signTx(const HDNode *node, RippleSignTx *tx,
                    RippleSignedTx *resp);
 
 #endif
