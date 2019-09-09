@@ -31,9 +31,37 @@
 
 #define RIPPLE_FLAG_FULLY_CANONICAL 0x80000000
 
+typedef struct _FieldMapping FieldMapping;
+
 bool ripple_getAddress(const HDNode *node, char address[MAX_ADDR_SIZE]);
 
 void ripple_formatAmount(char *buf, size_t len, uint64_t amount);
+
+void ripple_serializeType(uint8_t **buf, size_t *len, const FieldMapping *m);
+
+void ripple_serializeInt16(uint8_t **buf, size_t *len,
+                           const FieldMapping *m, int16_t val);
+
+void ripple_serializeInt32(uint8_t **buf, size_t *len,
+                           const FieldMapping *m, int32_t val);
+
+void ripple_serializeAmount(uint8_t **buf, size_t *len,
+                            const FieldMapping *m, int64_t amount);
+
+void ripple_serializeVarint(uint8_t **buf, size_t *len, int val);
+
+void ripple_serializeBytes(uint8_t **buf, size_t *len,
+                           const uint8_t *bytes, size_t count);
+
+void ripple_serializeAddress(uint8_t **buf, size_t *len,
+                             const FieldMapping *m, const char *address);
+
+void ripple_serializeVL(uint8_t **buf, size_t *len, const FieldMapping *m,
+                        const uint8_t *bytes, size_t count);
+
+void ripple_serialize(uint8_t **buf, size_t *len, const RippleSignTx *tx,
+                      const char *source_address,
+                      const uint8_t *pubkey, const uint8_t *sig);
 
 void ripple_signTx(const HDNode *node, RippleSignTx *tx,
                    RippleSignedTx *resp);

@@ -24,6 +24,32 @@
 
 #include <assert.h>
 
+typedef enum {
+    FT_INT16 = 1,
+    FT_INT32 = 2,
+    FT_AMOUNT = 6,
+    FT_VL = 7,
+    FT_ACCOUNT = 8,
+} FieldType;
+
+typedef struct _FieldMapping {
+    FieldType type;
+    int key;
+} FieldMapping;
+
+static const FieldMapping FM_account =            { .type = FT_ACCOUNT, .key = 1 };
+static const FieldMapping FM_amount  =            { .type = FT_AMOUNT,  .key = 1 };
+static const FieldMapping FM_destination =        { .type = FT_ACCOUNT, .key = 3 };
+static const FieldMapping FM_fee =                { .type = FT_AMOUNT,  .key  = 8 };
+static const FieldMapping FM_sequence =           { .type = FT_INT32,   .key = 4 };
+static const FieldMapping FM_type =               { .type = FT_INT16,   .key = 2 };
+static const FieldMapping FM_signingPubKey =      { .type = FT_VL,      .key = 3 };
+static const FieldMapping FM_flags =              { .type = FT_INT32,   .key = 2 };
+static const FieldMapping FM_txnSignature =       { .type = FT_VL,      .key = 4 };
+static const FieldMapping FM_lastLedgerSequence = { .type = FT_INT32,   .key = 27 };
+static const FieldMapping FM_destinationTag =     { .type = FT_INT32,   .key = 14 };
+
+
 // https://developers.ripple.com/base58-encodings.html
 static const char *ripple_b58digits = "rpshnaf39wBUDNEGHJKLM4PQRST7VWXYZ2bcdeCg65jkm8oFqi1tuvAxyz";
 
@@ -50,33 +76,7 @@ void ripple_formatAmount(char *buf, size_t len, uint64_t amount)
     bn_read_uint64(amount, &val);
     bn_format(&val, NULL, " XRP", RIPPLE_DECIMALS, 0, false, buf, len);
 }
-
-typedef enum {
-    FT_INT16 = 1,
-    FT_INT32 = 2,
-    FT_AMOUNT = 6,
-    FT_VL = 7,
-    FT_ACCOUNT = 8,
-} FieldType;
-
-typedef struct {
-    FieldType type;
-    int key;
-} FieldMapping;
-
-static const FieldMapping FM_account =            { .type = FT_ACCOUNT, .key = 1 };
-static const FieldMapping FM_amount  =            { .type = FT_AMOUNT,  .key = 1 };
-static const FieldMapping FM_destination =        { .type = FT_ACCOUNT, .key = 3 };
-static const FieldMapping FM_fee =                { .type = FT_AMOUNT,  .key  = 8 };
-static const FieldMapping FM_sequence =           { .type = FT_INT32,   .key = 4 };
-static const FieldMapping FM_type =               { .type = FT_INT16,   .key = 2 };
-static const FieldMapping FM_signingPubKey =      { .type = FT_VL,      .key = 3 };
-static const FieldMapping FM_flags =              { .type = FT_INT32,   .key = 2 };
-static const FieldMapping FM_txnSignature =       { .type = FT_VL,      .key = 4 };
-static const FieldMapping FM_lastLedgerSequence = { .type = FT_INT32,   .key = 27 };
-static const FieldMapping FM_destinationTag =     { .type = FT_INT32,   .key = 14 };
-
-static void write_type(uint8_t **buf, size_t *len, const FieldMapping *m)
+void ripple_serializeType(uint8_t **buf, size_t *len, const FieldMapping *m)
 {
     if (m->key <= 0xf) {
         assert(*len > 0 && "buffer not long enough");
@@ -93,10 +93,10 @@ static void write_type(uint8_t **buf, size_t *len, const FieldMapping *m)
     }
 }
 
-static void write_i16(uint8_t **buf, size_t *len, const FieldMapping *m,
-                      int16_t val)
+void ripple_serializeInt16(uint8_t **buf, size_t *len,
+                           const FieldMapping *m, int16_t val)
 {
-    write_type(buf, len, m);
+    ripple_serializeType(buf, len, m);
     assert(m->type == FT_INT16 && "wrong type?");
     assert(*len >= 2 && "buffer not long enough");
     *buf[0] = (val >> 8) & 0xff;
@@ -105,12 +105,12 @@ static void write_i16(uint8_t **buf, size_t *len, const FieldMapping *m,
     *len -= 2;
 }
 
-static void write_i32(uint8_t **buf, size_t *len, const FieldMapping *m,
-                      int32_t val)
+void ripple_serializeInt32(uint8_t **buf, size_t *len,
+                           const FieldMapping *m, int32_t val)
 {
     assert(m->type == FT_INT32 && "wrong type?");
     assert(*len >= 4 && "buffer not long enough");
-    write_type(buf, len, m);
+    ripple_serializeType(buf, len, m);
     *buf[0] = (val >> 24) & 0xff;
     *buf[1] = (val >> 16) & 0xff;
     *buf[2] = (val >>  8) & 0xff;
@@ -119,10 +119,10 @@ static void write_i32(uint8_t **buf, size_t *len, const FieldMapping *m,
     *len -= 4;
 }
 
-static void write_amount(uint8_t **buf, size_t *len, const FieldMapping *m,
-                         int64_t amount)
+void ripple_serializeAmount(uint8_t **buf, size_t *len,
+                            const FieldMapping *m, int64_t amount)
 {
-    write_type(buf, len, m);
+    ripple_serializeType(buf, len, m);
     assert(amount >= 0 && "amounts cannot be negative");
     assert(amount <= 100000000000 && "larger amounts not supported");
     assert(*len >= 8 && "buffer not long enough");
@@ -140,7 +140,7 @@ static void write_amount(uint8_t **buf, size_t *len, const FieldMapping *m,
     *len -= 8;
 }
 
-static void write_varint(uint8_t **buf, size_t *len, int val)
+void ripple_serializeVarint(uint8_t **buf, size_t *len, int val)
 {
     if (val < 0)
         return;
@@ -177,17 +177,18 @@ static void write_varint(uint8_t **buf, size_t *len, int val)
     assert(false && "value too large");
 }
 
-static void write_bytes(uint8_t **buf, size_t *len, const uint8_t *bytes, size_t count)
+void ripple_serializeBytes(uint8_t **buf, size_t *len,
+                           const uint8_t *bytes, size_t count)
 {
-    write_varint(buf, len, count);
+    ripple_serializeVarint(buf, len, count);
     assert(*len >= count && "buffer not long enough");
     memcpy(*buf, bytes, count);
     *buf += count;
     *len -= count;
 }
 
-static void write_address(uint8_t **buf, size_t *len, const FieldMapping *m,
-                          const char *address)
+void ripple_serializeAddress(uint8_t **buf, size_t *len,
+                             const FieldMapping *m, const char *address)
 {
     const curve_info *curve = get_curve_by_name("secp256k1");
     if (!curve) return;
@@ -197,41 +198,41 @@ static void write_address(uint8_t **buf, size_t *len, const FieldMapping *m,
                                               addr_raw, MAX_ADDR_RAW_SIZE,
                                               ripple_b58digits);
 
-    write_bytes(buf, len, addr_raw + 1, addr_raw_len - 1);
+    ripple_serializeBytes(buf, len, addr_raw + 1, addr_raw_len - 1);
 }
 
-static void write_vl(uint8_t **buf, size_t *len, const FieldMapping *m,
-                     const uint8_t *bytes, size_t count)
+void ripple_serializeVL(uint8_t **buf, size_t *len, const FieldMapping *m,
+                        const uint8_t *bytes, size_t count)
 {
-    write_type(buf, len, m);
-    write_bytes(buf, len, bytes, count);
+    ripple_serializeType(buf, len, m);
+    ripple_serializeBytes(buf, len, bytes, count);
 }
 
-static void serialize(uint8_t **buf, size_t *len, const RippleSignTx *tx,
+void ripple_serialize(uint8_t **buf, size_t *len, const RippleSignTx *tx,
                       const char *source_address,
                       const uint8_t *pubkey, const uint8_t *sig)
 {
-    write_i16(buf, len, &FM_type, /*Payment*/0);
+    ripple_serializeInt16(buf, len, &FM_type, /*Payment*/0);
     if (tx->has_flags)
-        write_i32(buf, len, &FM_flags, tx->flags);
+        ripple_serializeInt32(buf, len, &FM_flags, tx->flags);
     if (tx->has_sequence)
-        write_i32(buf, len, &FM_sequence, tx->sequence);
+        ripple_serializeInt32(buf, len, &FM_sequence, tx->sequence);
     if (tx->payment.has_destination_tag)
-        write_i32(buf, len, &FM_destinationTag, tx->payment.destination_tag);
+        ripple_serializeInt32(buf, len, &FM_destinationTag, tx->payment.destination_tag);
     if (tx->has_last_ledger_sequence)
-        write_i32(buf, len, &FM_lastLedgerSequence, tx->last_ledger_sequence);
+        ripple_serializeInt32(buf, len, &FM_lastLedgerSequence, tx->last_ledger_sequence);
     if (tx->payment.has_amount)
-        write_amount(buf, len, &FM_amount, tx->payment.amount);
+        ripple_serializeAmount(buf, len, &FM_amount, tx->payment.amount);
     if (tx->has_fee)
-        write_amount(buf, len, &FM_amount, tx->fee);
+        ripple_serializeAmount(buf, len, &FM_amount, tx->fee);
     if (pubkey)
-        write_vl(buf, len, &FM_signingPubKey, pubkey, 33);
+        ripple_serializeVL(buf, len, &FM_signingPubKey, pubkey, 33);
     if (sig)
-        write_vl(buf, len, &FM_txnSignature, sig, 64);
+        ripple_serializeVL(buf, len, &FM_txnSignature, sig, 64);
     if (source_address)
-        write_address(buf, len, &FM_account, source_address);
+        ripple_serializeAddress(buf, len, &FM_account, source_address);
     if (tx->payment.has_destination)
-        write_address(buf, len, &FM_destination, tx->payment.destination);
+        ripple_serializeAddress(buf, len, &FM_destination, tx->payment.destination);
 }
 
 void ripple_signTx(const HDNode *node, RippleSignTx *tx,
@@ -260,7 +261,7 @@ void ripple_signTx(const HDNode *node, RippleSignTx *tx,
 
     uint8_t *buf = resp->serialized_tx.bytes;
     size_t len = sizeof(resp->serialized_tx.bytes) - 4;
-    serialize(&buf, &len, tx, source_address, node->public_key, NULL);
+    ripple_serialize(&buf, &len, tx, source_address, node->public_key, NULL);
 
     // Ripple uses the first half of SHA512
     uint8_t hash[64];
@@ -278,7 +279,7 @@ void ripple_signTx(const HDNode *node, RippleSignTx *tx,
 
     buf = resp->serialized_tx.bytes;
     len = sizeof(resp->serialized_tx);
-    serialize(&buf, &len, tx, source_address, node->public_key, resp->signature.bytes);
+    ripple_serialize(&buf, &len, tx, source_address, node->public_key, resp->signature.bytes);
     resp->has_serialized_tx = true;
     resp->serialized_tx.size = buf - resp->serialized_tx.bytes;
 }

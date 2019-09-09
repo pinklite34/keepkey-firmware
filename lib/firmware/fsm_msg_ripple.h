@@ -62,7 +62,7 @@ void fsm_msgRippleGetAddress(const RippleGetAddress *msg)
   layoutHome();
 }
 
-void fsm_msgRippleSignTx(const RippleSignTx *msg)
+void fsm_msgRippleSignTx(RippleSignTx *msg)
 {
   RESP_INIT(RippleSignedTx);
 
