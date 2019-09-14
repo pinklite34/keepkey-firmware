@@ -24,8 +24,8 @@
 
 #include "messages-ripple.pb.h"
 
-#define RIPPLE_MIN_FEE    10
-#define RIPPLE_MAX_FEE 10000
+#define RIPPLE_MIN_FEE      10
+#define RIPPLE_MAX_FEE 1000000
 
 #define RIPPLE_DECIMALS 6
 

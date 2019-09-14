@@ -78,17 +78,16 @@ void fsm_msgRippleSignTx(RippleSignTx *msg)
                                           msg->address_n_count, NULL);
   if (!node) return;
 
-  if (msg->fee < RIPPLE_MIN_FEE || msg->fee > RIPPLE_MAX_FEE) {
+  if (!msg->has_fee || msg->fee < RIPPLE_MIN_FEE || msg->fee > RIPPLE_MAX_FEE) {
       fsm_sendFailure(FailureType_Failure_SyntaxError,
-                      _("Fee must be betweeen " STR(RIPPLE_MIN_FEE) " and "
-                        STR(RIPPLE_MAX_FEE) " drops."));
+                      _("Fee must be betweeen 10 and 1,000,000 drops"));
       return;
   }
 
-  char amount_string[ + 3 + 1];
+  char amount_string[20 + 4 + 1];
   ripple_formatAmount(amount_string, sizeof(amount_string), msg->payment.amount);
 
-  char fee_string[ + 3 + 1];
+  char fee_string[20 + 4 + 1];
   ripple_formatAmount(fee_string, sizeof(fee_string), msg->fee);
 
   if (needs_confirm) {

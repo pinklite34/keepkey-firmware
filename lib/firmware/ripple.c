@@ -80,15 +80,14 @@ void ripple_serializeType(uint8_t **buf, size_t *len, const FieldMapping *m)
 {
     if (m->key <= 0xf) {
         assert(*len > 0 && "buffer not long enough");
-        *buf[0] = m->type << 4 | m->key;
+        (*buf)[0] = m->type << 4 | m->key;
         *buf += 1;
         *len -= 1;
     } else {
         assert(*len >= 1 && "buffer not long enough");
-        **buf = m->type << 4;
-        *buf += 1;
-        **buf = m->key;
-        *buf += 1;
+        (*buf)[0] = m->type << 4;
+        (*buf)[1] = m->key;
+        *buf += 2;
         *len -= 2;
     }
 }
@@ -99,8 +98,8 @@ void ripple_serializeInt16(uint8_t **buf, size_t *len,
     ripple_serializeType(buf, len, m);
     assert(m->type == FT_INT16 && "wrong type?");
     assert(*len >= 2 && "buffer not long enough");
-    *buf[0] = (val >> 8) & 0xff;
-    *buf[1] = val & 0xff;
+    (*buf)[0] = (val >> 8) & 0xff;
+    (*buf)[1] = val & 0xff;
     *buf += 2;
     *len -= 2;
 }
@@ -111,10 +110,10 @@ void ripple_serializeInt32(uint8_t **buf, size_t *len,
     assert(m->type == FT_INT32 && "wrong type?");
     assert(*len >= 4 && "buffer not long enough");
     ripple_serializeType(buf, len, m);
-    *buf[0] = (val >> 24) & 0xff;
-    *buf[1] = (val >> 16) & 0xff;
-    *buf[2] = (val >>  8) & 0xff;
-    *buf[3] = val & 0xff;
+    (*buf)[0] = (val >> 24) & 0xff;
+    (*buf)[1] = (val >> 16) & 0xff;
+    (*buf)[2] = (val >>  8) & 0xff;
+    (*buf)[3] = val & 0xff;
     *buf += 4;
     *len -= 4;
 }
@@ -126,16 +125,16 @@ void ripple_serializeAmount(uint8_t **buf, size_t *len,
     assert(amount >= 0 && "amounts cannot be negative");
     assert(amount <= 100000000000 && "larger amounts not supported");
     assert(*len >= 8 && "buffer not long enough");
-    *buf[0] = (amount >> (7 * 8)) & 0xff;
-    *buf[1] = (amount >> (6 * 8)) & 0xff;
-    *buf[2] = (amount >> (5 * 8)) & 0xff;
-    *buf[3] = (amount >> (4 * 8)) & 0xff;
-    *buf[4] = (amount >> (3 * 8)) & 0xff;
-    *buf[5] = (amount >> (2 * 8)) & 0xff;
-    *buf[6] = (amount >> (1 * 8)) & 0xff;
-    *buf[7] = amount & 0xff;
-    *buf[0] &= 0x7f; // Clear first bit, indicating XRP
-    *buf[0] |= 0x40; // Clear second bit, indicating value is positive
+    (*buf)[0] = (amount >> (7 * 8)) & 0xff;
+    (*buf)[1] = (amount >> (6 * 8)) & 0xff;
+    (*buf)[2] = (amount >> (5 * 8)) & 0xff;
+    (*buf)[3] = (amount >> (4 * 8)) & 0xff;
+    (*buf)[4] = (amount >> (3 * 8)) & 0xff;
+    (*buf)[5] = (amount >> (2 * 8)) & 0xff;
+    (*buf)[6] = (amount >> (1 * 8)) & 0xff;
+    (*buf)[7] = amount & 0xff;
+    (*buf)[0] &= 0x7f; // Clear first bit, indicating XRP
+    (*buf)[0] |= 0x40; // Clear second bit, indicating value is positive
     *buf += 8;
     *len -= 8;
 }
@@ -147,7 +146,7 @@ void ripple_serializeVarint(uint8_t **buf, size_t *len, int val)
 
     if (val < 192) {
         assert(*len >= 1 && "buffer not long enough");
-        *buf[0] = val;
+        (*buf)[0] = val;
         *buf += 1;
         *len -= 1;
         return;
@@ -156,8 +155,8 @@ void ripple_serializeVarint(uint8_t **buf, size_t *len, int val)
     if (val <= 12480) {
         assert(*len >= 2 && "buffer not long enough");
         val -= 193;
-        *buf[0] = 193 + (val >> 8);
-        *buf[1] = val & 0xff;
+        (*buf)[0] = 193 + (val >> 8);
+        (*buf)[1] = val & 0xff;
         *buf += 2;
         *len -= 2;
         return;
@@ -166,9 +165,9 @@ void ripple_serializeVarint(uint8_t **buf, size_t *len, int val)
     if (val < 918744) {
         assert(*len >= 3 && "buffer not long enough");
         val -= 12481;
-        *buf[0] = 241 + (val >> 16);
-        *buf[1] = (val >> 8) & 0xff;
-        *buf[2] = val & 0xff;
+        (*buf)[0] = 241 + (val >> 16);
+        (*buf)[1] = (val >> 8) & 0xff;
+        (*buf)[2] = val & 0xff;
         *buf += 3;
         *len -= 3;
         return;
