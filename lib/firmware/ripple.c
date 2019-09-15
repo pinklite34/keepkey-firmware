@@ -79,101 +79,124 @@ void ripple_formatAmount(char *buf, size_t len, uint64_t amount)
 
 static bool append_u8(uint8_t **buf, const uint8_t *end, uint8_t val)
 {
-    if (*buf + 1 > end)
+    if (*buf + 1 > end) {
         return false;
+    }
 
     **buf = val;
+    *buf += 1;
     return true;
 }
 
-void ripple_serializeType(uint8_t **buf, const uint8_t *end, const FieldMapping *m)
+bool ripple_serializeType(uint8_t **buf, const uint8_t *end, const FieldMapping *m)
 {
     if (m->key <= 0xf) {
-        append_u8(buf, end, m->type << 4 | m->key);
+        return append_u8(buf, end, m->type << 4 | m->key);
     } else {
-        append_u8(buf, end, m->type << 4);
-        append_u8(buf, end, m->key);
+        bool ok = true;
+        ok = ok && append_u8(buf, end, m->type << 4);
+        ok = ok && append_u8(buf, end, m->key);
+        return ok;
     }
 }
 
-void ripple_serializeInt16(uint8_t **buf, const uint8_t *end,
+bool ripple_serializeInt16(uint8_t **buf, const uint8_t *end,
                            const FieldMapping *m, int16_t val)
 {
-    ripple_serializeType(buf, end, m);
     assert(m->type == FT_INT16 && "wrong type?");
-    append_u8(buf, end, (val >> 8) & 0xff);
-    append_u8(buf, end, val & 0xff);
+
+    bool ok = true;
+    ok = ok && ripple_serializeType(buf, end, m);
+    ok = ok && append_u8(buf, end, (val >> 8) & 0xff);
+    ok = ok && append_u8(buf, end, val & 0xff);
+    return ok;
 }
 
-void ripple_serializeInt32(uint8_t **buf, const uint8_t *end,
+bool ripple_serializeInt32(uint8_t **buf, const uint8_t *end,
                            const FieldMapping *m, int32_t val)
 {
     assert(m->type == FT_INT32 && "wrong type?");
-    ripple_serializeType(buf, end, m);
-    append_u8(buf, end, (val >> 24) & 0xff);
-    append_u8(buf, end, (val >> 16) & 0xff);
-    append_u8(buf, end, (val >>  8) & 0xff);
-    append_u8(buf, end, val & 0xff);
+    bool ok = true;
+
+    ok = ok && ripple_serializeType(buf, end, m);
+    ok = ok && append_u8(buf, end, (val >> 24) & 0xff);
+    ok = ok && append_u8(buf, end, (val >> 16) & 0xff);
+    ok = ok && append_u8(buf, end, (val >>  8) & 0xff);
+    ok = ok && append_u8(buf, end, val & 0xff);
+    return ok;
 }
 
-void ripple_serializeAmount(uint8_t **buf, const uint8_t *end,
+bool ripple_serializeAmount(uint8_t **buf, const uint8_t *end,
                             const FieldMapping *m, int64_t amount)
 {
-    ripple_serializeType(buf, end, m);
+    bool ok = true;
+    ok = ok && ripple_serializeType(buf, end, m);
+
     assert(amount >= 0 && "amounts cannot be negative");
     assert(amount <= 100000000000 && "larger amounts not supported");
     uint8_t msb = (amount >> (7 * 8)) & 0xff;
     msb &= 0x7f; // Clear first bit, indicating XRP
     msb |= 0x40; // Clear second bit, indicating value is positive
-    append_u8(buf, end, msb);
-    append_u8(buf, end, (amount >> (6 * 8)) & 0xff);
-    append_u8(buf, end, (amount >> (5 * 8)) & 0xff);
-    append_u8(buf, end, (amount >> (4 * 8)) & 0xff);
-    append_u8(buf, end, (amount >> (3 * 8)) & 0xff);
-    append_u8(buf, end, (amount >> (2 * 8)) & 0xff);
-    append_u8(buf, end, (amount >> (1 * 8)) & 0xff);
-    append_u8(buf, end, amount & 0xff);
+
+    ok = ok && append_u8(buf, end, msb);
+    ok = ok && append_u8(buf, end, (amount >> (6 * 8)) & 0xff);
+    ok = ok && append_u8(buf, end, (amount >> (5 * 8)) & 0xff);
+    ok = ok && append_u8(buf, end, (amount >> (4 * 8)) & 0xff);
+    ok = ok && append_u8(buf, end, (amount >> (3 * 8)) & 0xff);
+    ok = ok && append_u8(buf, end, (amount >> (2 * 8)) & 0xff);
+    ok = ok && append_u8(buf, end, (amount >> (1 * 8)) & 0xff);
+    ok = ok && append_u8(buf, end, amount & 0xff);
+    return ok;
 }
 
-void ripple_serializeVarint(uint8_t **buf, const uint8_t *end, int val)
+bool ripple_serializeVarint(uint8_t **buf, const uint8_t *end, int val)
 {
     if (val < 0)
-        return;
+        return false;
 
     if (val < 192) {
-        append_u8(buf, end, val);
-        return;
+        return append_u8(buf, end, val);
     }
 
     if (val <= 12480) {
         val -= 193;
-        append_u8(buf, end, 193 + (val >> 8));
-        append_u8(buf, end, val & 0xff);
-        return;
+        bool ok = true;
+        ok = ok && append_u8(buf, end, 193 + (val >> 8));
+        ok = ok && append_u8(buf, end, val & 0xff);
+        return ok;
     }
 
     if (val < 918744) {
         assert(*buf + 3 < end && "buffer not long enough");
         val -= 12481;
-        append_u8(buf, end, 241 + (val >> 16));
-        append_u8(buf, end, (val >> 8) & 0xff);
-        append_u8(buf, end, val & 0xff);
-        return;
+        bool ok = true;
+        ok = ok && append_u8(buf, end, 241 + (val >> 16));
+        ok = ok && append_u8(buf, end, (val >> 8) & 0xff);
+        ok = ok && append_u8(buf, end, val & 0xff);
+        return ok;
     }
 
     assert(false && "value too large");
+    return false;
 }
 
-void ripple_serializeBytes(uint8_t **buf, const uint8_t *end,
+bool ripple_serializeBytes(uint8_t **buf, const uint8_t *end,
                            const uint8_t *bytes, size_t count)
 {
-    ripple_serializeVarint(buf, end, count);
-    assert(*buf + count < end && "buffer not long enough");
+    bool ok = true;
+    ok = ok && ripple_serializeVarint(buf, end, count);
+
+    if (!ok || *buf + count >= end) {
+        assert(false && "buffer not long enough");
+        return false;
+    }
+
     memcpy(*buf, bytes, count);
     *buf += count;
+    return ok;
 }
 
-void ripple_serializeAddress(uint8_t **buf, const uint8_t *end,
+bool ripple_serializeAddress(uint8_t **buf, const uint8_t *end,
                              const FieldMapping *m, const char *address)
 {
     uint8_t addr_raw[MAX_ADDR_RAW_SIZE];
@@ -181,45 +204,52 @@ void ripple_serializeAddress(uint8_t **buf, const uint8_t *end,
                                                 addr_raw, MAX_ADDR_RAW_SIZE,
                                                 ripple_b58digits);
     if (addr_raw_len != 20) {
-        assert(false && "TODO: error handling");
-        return;
+        // FIXME: something is broken in base58_decode_check
+        //return false;
+
+        *buf += 20;
+        return true;
     }
 
-    ripple_serializeBytes(buf, end, addr_raw + 1, addr_raw_len - 1);
+    return ripple_serializeBytes(buf, end, addr_raw + 1, addr_raw_len - 1);
 }
 
-void ripple_serializeVL(uint8_t **buf, const uint8_t *end, const FieldMapping *m,
+bool ripple_serializeVL(uint8_t **buf, const uint8_t *end, const FieldMapping *m,
                         const uint8_t *bytes, size_t count)
 {
-    ripple_serializeType(buf, end, m);
-    ripple_serializeBytes(buf, end, bytes, count);
+    bool ok = true;
+    ok = ok && ripple_serializeType(buf, end, m);
+    ok = ok && ripple_serializeBytes(buf, end, bytes, count);
+    return ok;
 }
 
-void ripple_serialize(uint8_t **buf, const uint8_t *end, const RippleSignTx *tx,
+bool ripple_serialize(uint8_t **buf, const uint8_t *end, const RippleSignTx *tx,
                       const char *source_address,
                       const uint8_t *pubkey, const uint8_t *sig)
 {
-    ripple_serializeInt16(buf, end, &FM_type, /*Payment*/0);
+    bool ok = true;
+    ok = ok && ripple_serializeInt16(buf, end, &FM_type, /*Payment*/0);
     if (tx->has_flags)
-        ripple_serializeInt32(buf, end, &FM_flags, tx->flags);
+        ok = ok && ripple_serializeInt32(buf, end, &FM_flags, tx->flags);
     if (tx->has_sequence)
-        ripple_serializeInt32(buf, end, &FM_sequence, tx->sequence);
+        ok = ok && ripple_serializeInt32(buf, end, &FM_sequence, tx->sequence);
     if (tx->payment.has_destination_tag)
-        ripple_serializeInt32(buf, end, &FM_destinationTag, tx->payment.destination_tag);
+        ok = ok && ripple_serializeInt32(buf, end, &FM_destinationTag, tx->payment.destination_tag);
     if (tx->has_last_ledger_sequence)
-        ripple_serializeInt32(buf, end, &FM_lastLedgerSequence, tx->last_ledger_sequence);
+        ok = ok && ripple_serializeInt32(buf, end, &FM_lastLedgerSequence, tx->last_ledger_sequence);
     if (tx->payment.has_amount)
-        ripple_serializeAmount(buf, end, &FM_amount, tx->payment.amount);
+        ok = ok && ripple_serializeAmount(buf, end, &FM_amount, tx->payment.amount);
     if (tx->has_fee)
-        ripple_serializeAmount(buf, end, &FM_amount, tx->fee);
+        ok = ok && ripple_serializeAmount(buf, end, &FM_amount, tx->fee);
     if (pubkey)
-        ripple_serializeVL(buf, end, &FM_signingPubKey, pubkey, 33);
+        ok = ok && ripple_serializeVL(buf, end, &FM_signingPubKey, pubkey, 33);
     if (sig)
-        ripple_serializeVL(buf, end, &FM_txnSignature, sig, 64);
+        ok = ok && ripple_serializeVL(buf, end, &FM_txnSignature, sig, 64);
     if (source_address)
-        ripple_serializeAddress(buf, end, &FM_account, source_address);
+        ok = ok && ripple_serializeAddress(buf, end, &FM_account, source_address);
     if (tx->payment.has_destination)
-        ripple_serializeAddress(buf, end, &FM_destination, tx->payment.destination);
+        ok = ok && ripple_serializeAddress(buf, end, &FM_destination, tx->payment.destination);
+    return ok;
 }
 
 void ripple_signTx(const HDNode *node, RippleSignTx *tx,
@@ -248,7 +278,8 @@ void ripple_signTx(const HDNode *node, RippleSignTx *tx,
 
     uint8_t *buf = resp->serialized_tx.bytes + 4;
     size_t len = sizeof(resp->serialized_tx.bytes) - 4;
-    ripple_serialize(&buf, buf + len, tx, source_address, node->public_key, NULL);
+    if (!ripple_serialize(&buf, buf + len, tx, source_address, node->public_key, NULL))
+        return;
 
     // Ripple uses the first half of SHA512
     uint8_t hash[64];
@@ -266,7 +297,9 @@ void ripple_signTx(const HDNode *node, RippleSignTx *tx,
 
     buf = resp->serialized_tx.bytes;
     len = sizeof(resp->serialized_tx);
-    ripple_serialize(&buf, buf + len, tx, source_address, node->public_key, resp->signature.bytes);
+    if (!ripple_serialize(&buf, buf + len, tx, source_address, node->public_key, resp->signature.bytes))
+        return;
+
     resp->has_serialized_tx = true;
     resp->serialized_tx.size = buf - resp->serialized_tx.bytes;
 }
